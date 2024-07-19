@@ -1,4 +1,5 @@
 # Load Packages ----
+library(devtools)
 library(shiny) 
 library(shinyalert) 
 library(shinyBS)  
@@ -8,8 +9,11 @@ library(ggplot2)
 library(dplyr) 
 library(scales)
 library(rmeta)
-library(boastUtils)  
+library(boastUtils)
 library(DT)
+
+# Penn State enrollment data source
+# https://datadigest.psu.edu/student-enrollment/
 
 enrollmentData <- data.frame(
   Pennsylvania = c(24028, 19143),
@@ -53,7 +57,7 @@ ui <- list(
         menuItem("Explore", tabName = "explore", icon = icon("wpexplorer")),
         menuItem("Example", tabName = "example", icon = icon("book-open-reader")), 
         menuItem("References", tabName = "references", icon = icon("leanpub"))
-        ),
+      ),
       tags$div(
         class = "sidebar-logo",
         boastUtils::sidebarFooter()
@@ -95,7 +99,7 @@ ui <- list(
           br(),
           h2("Acknowledgements"),
           p("This app was developed and coded by Jingjun Wang and updated by 
-            Shravani Samala, Junjie He, and Robert Chappell. Special thanks to
+            Shravani Samala, Junjie He, Robert Chappell, and Davis Im. Special thanks to
             Neil Hatfield.",
             br(),
             br(),
@@ -104,7 +108,7 @@ ui <- list(
             boastUtils::citeApp(),
             br(),
             br(),
-            div(class = "updated", "Last Updated: 8/11/2022 by RWC.")
+            div(class = "updated", "Last Updated: 06/07/2024 by DJI.")
           )
         ),
         ## Set up the Prerequisites Page ----
@@ -179,8 +183,8 @@ ui <- list(
           p(style = "font-size: 18px;", 
             "\\[ \\hat{\\theta} = e^{\\log\\widehat{\\theta}\\pm1.96\\sqrt{\\frac{1}{a}+\\frac{1}{b}+
      \\frac{1}{c}+\\frac{1}{d}}} \\]")
-          ),
-        
+        ),
+        # In your UI section, add a placeholder for the caption text
         ## Set up an Explore Page----
         tabItem(
           tabName = "explore",
@@ -203,7 +207,7 @@ ui <- list(
               br(),
               p("Odds of Pennsylvania residents for University Park: 1.45 "),
               p("Odds of Pennsylvania residents for other campuses: 4.11 "),
-              p("Odds ratio (θ) : \\(\\frac{1.45}{4.11}= 0.35\\)"),
+              p("Odds ratio (θ) : \\({1.45}\\big/{4.11}= 0.35\\)"),
               br(),
               tabsetPanel(
                 type = "tabs",
@@ -213,85 +217,89 @@ ui <- list(
                   fluid = TRUE,
                   br(),
                   wellPanel(
-                  sliderInput(
-                    inputId = "dLevel",
-                    label = "Confidence Level",
-                    min = .50,
-                    max = 0.99,
-                    value = 0.95,
-                    step = 0.01
-                  ),
-                  sliderInput(
-                    inputId = "nSamp1",
-                    label = "Sample Size for University Park",
-                    min = 30,
-                    max = 200,
-                    value = 50,
-                    step = 5
-                  ),
-                  sliderInput(
-                    inputId = "nSamp2",
-                    label = "Sample Size for Other Campuses",
-                    min = 30,
-                    max = 200,
-                    value = 50,
-                    step = 5
-                  )
-                )),
+                    sliderInput(
+                      inputId = "dLevel",
+                      label = "Confidence Level",
+                      min = .50,
+                      max = 0.99,
+                      value = 0.95,
+                      step = 0.01
+                    ),
+                    sliderInput(
+                      inputId = "nSamp1",
+                      label = "Sample Size for University Park",
+                      min = 30,
+                      max = 200,
+                      value = 50,
+                      step = 5
+                    ),
+                    sliderInput(
+                      inputId = "nSamp2",
+                      label = "Sample Size for Other Campuses",
+                      min = 30,
+                      max = 200,
+                      value = 50,
+                      step = 5
+                    )
+                  )),
                 tabPanel(
                   "Same Sample Size",
                   fluid = TRUE,
                   wellPanel(
-                  sliderInput(
-                    inputId = "dLevel1",
-                    label = "Confidence Level",
-                    min = .10,
-                    max = 0.99,
-                    value = 0.95,
-                    step = 0.01
-                  ),
-                  sliderInput(
-                    inputId = "nSamp3",
-                    label = "Sample Sizes for both University Park and Other Campuses",
-                    min = 30,
-                    max = 200,
-                    value = 50,
-                    step = 5
+                    sliderInput(
+                      inputId = "dLevel1",
+                      label = "Confidence Level",
+                      min = .10,
+                      max = 0.99,
+                      value = 0.95,
+                      step = 0.01
+                    ),
+                    sliderInput(
+                      inputId = "nSamp3",
+                      label = "Sample Sizes for both University Park and Other Campuses",
+                      min = 30,
+                      max = 200,
+                      value = 50,
+                      step = 5
+                    )
                   )
                 )
-              )
-            )),
+              )),
             column(
               width = 6, 
               offset = 0,
               plotOutput("CIplot", height = "600px", click = "plot_click"),
+              textOutput("coverageText"),
+              br(),
               p("Black vertical line for null theta & green vertical line 
              for true odds ratio. Click on an interval (dot) to show the
              underlying data. The first row in tables below are at University Park,
              and the second at Commonwealth Campuses",
-             style="text-align: center;"), 
-             fluidRow(
-               column(
-                 width = 6, 
-                 offset = 0,
-                tags$strong("Sample Counts"),
-                tableOutput("sampleinfotable2")
-               ), 
-               column(
-                 width = 6,
-                 offset = 0,
-                 tags$strong("Sample Percentages"),
-                 tableOutput("sampleinfotable1")
-               )
-             ),
-             uiOutput("sampleinforatioUi"),
-             br(),
-             bsButton(
-               inputId = "newSample", 
-               label = "Generate 50 New Samples",
-               size = "large",
-               icon("retweet"),
-               style = "default"),
+                style="text-align: left;"), 
+              fluidRow(
+                column(
+                  width = 6, 
+                  offset = 0,
+                  tags$strong("Sample Counts"),
+                  tableOutput("sampleinfotable2")
+                ), 
+                column(
+                  width = 6,
+                  offset = 0,
+                  tags$strong("Sample Percentages"),
+                  tableOutput("sampleinfotable1")
+                )
+              ),
+              uiOutput("sampleinforatioUi"),
+              br(),
+              p("Odds ratio compares residency of UP vs Other Campuses"),
+              br(),
+              bsButton(
+                inputId = "newSample", 
+                label = "Generate 50 New Samples",
+                size = "large",
+                icon("retweet"),
+                style = "default"),
             ), 
           ),
         ),
@@ -370,6 +378,12 @@ ui <- list(
           ),
           p(
             class = "hangingindent",
+            "Kyu, H. H., and Fernández, E. (2009), 
+            “Artemisinin derivatives versus quinine for cerebral malaria in African children: a systematic review,” 
+            Bulletin of the World Health Organization, 87, 896–904. https://doi.org/10.2471/BLT.08.060327"
+          ),
+          p(
+            class = "hangingindent",
             "Lock, R., Frazer, P., Morgan, K., Lock, E., and Lock, D.  Statistics:
             Unlocking the Power of Data. Wiley, 2013. "
           ),
@@ -377,6 +391,12 @@ ui <- list(
             class = "hangingindent",
             "Lumley, T. (2018). rmeta: Meta-Analysis. R package version 3.0.
             Available from https://CRAN.R-project.org/package=rmeta"
+          ),
+          p(
+            class = "hangingindent",
+            "Ma, S.-J., Li, X., Xiong, Y.-Q., Yao, A.-. ling, and Chen, Q. (2015), 
+            “Combination Measles-Mumps-Rubella-Varicella Vaccine in Healthy Children: A Systematic Review and Meta-analysis of Immunogenicity and Safety,” 
+            Medicine, 94, e1721. https://doi.org/10.1097/MD.0000000000001721"
           ),
           p(
             class = "hangingindent",
@@ -423,23 +443,23 @@ server <- function(input, output, session) {
   observeEvent(
     eventExpr = input$info,
     handlerExpr = {
-    sendSweetAlert(
-      session = session,
-      title = "Instructions",
-      text = "This app explores confidence intervals for odds ratios and their
+      sendSweetAlert(
+        session = session,
+        title = "Instructions",
+        text = "This app explores confidence intervals for odds ratios and their
               use in the meta-analysis of real data.",
-      type = "info"
-    )
-  })
+        type = "info"
+      )
+    })
   
   observeEvent(
     eventExpr = input$goPrereq,
     handlerExpr = {
-    updateTabItems(
-      session = session,
-      inputId = "pages",
-      selected = "prerequisites")
-  }
+      updateTabItems(
+        session = session,
+        inputId = "pages",
+        selected = "prerequisites")
+    }
   )
   
   ##table in the explore page ----
@@ -498,6 +518,7 @@ server <- function(input, output, session) {
     }
   ) 
   
+  
   ## example page----
   observeEvent(
     eventExpr = input$sets,
@@ -547,7 +568,7 @@ server <- function(input, output, session) {
                                      the second comparison as shown above is
                                      between two medicine within targeted therapy
                                      treatment. This time,", strong("Summary OR = 0.961"),
-              ". However, the CI of the `Summary OR` contains
+                ". However, the CI of the `Summary OR` contains
                                      1. So we fail to reject that the effectiveness
                                      of the two medicine is about equal in this
                                      case. In two analyses, we both fail to reject
@@ -654,21 +675,21 @@ server <- function(input, output, session) {
   ##Calculating alpha by the confidence level input----
   dalpha <- reactive(
     x = {
-    (1 - input$dLevel) / 2
-  }
+      (1 - input$dLevel) / 2
+    }
   )
   
   ##Updating Sample Size----
   dN1 <- reactive(
     x = {
-    as.integer(input$nSamp1)
-  }
+      as.integer(input$nSamp1)
+    }
   )
   
   dN2 <- reactive(
     x = {
-    as.integer(input$nSamp2)
-  })
+      as.integer(input$nSamp2)
+    })
   dN3 <- reactive({
     as.integer(input$nSamp3)
   }
@@ -677,273 +698,298 @@ server <- function(input, output, session) {
   #generate 50 new sample----
   UPS50P <- reactive(
     x = {
-    input$newSample
-    data.frame(
-      x = do.call(paste0("rbinom"),
-          c(list(n = dN1() * 50), list(1, 0.595)))
-    ) %>%
-      mutate(idx = rep(1:50, each = dN1()))
-  }
+      input$newSample
+      data.frame(
+        x = do.call(paste0("rbinom"),
+                    c(list(n = dN1() * 50), list(1, 0.595)))
+      ) %>%
+        mutate(idx = rep(1:50, each = dN1()))
+    }
   )
   
   ups50p <- reactive(
     x = {
-    UPS50P() %>%
-      group_by(idx) %>%
-      summarise(
-        Count1 = sum(x))
-  }
+      UPS50P() %>%
+        group_by(idx) %>%
+        summarise(
+          Count1 = sum(x))
+    }
   )
   
   ups50n <- reactive(
     x = {
-    data.frame(idx = rep(1:50), 
-               Count2 = input$nSamp1-ups50p()[,2])
-  }
+      data.frame(idx = rep(1:50), 
+                 Count2 = input$nSamp1-ups50p()[,2])
+    }
   )
   
   UWS50P <- reactive(
     x = {
-    input$newSample
-    data.frame(
-      x = do.call(paste0("rbinom"),
-          c(list(n = dN2() * 50), list(1, 0.844)))
-    ) %>%
-      mutate(idx = rep(1:50, each = dN2()))
-  }
+      input$newSample
+      data.frame(
+        x = do.call(paste0("rbinom"),
+                    c(list(n = dN2() * 50), list(1, 0.844)))
+      ) %>%
+        mutate(idx = rep(1:50, each = dN2()))
+    }
   )
   
   uws50p <- reactive(
     x = {
-    UWS50P() %>%
-      group_by(idx) %>%
-      summarise(
-        Count3 = sum(x))
-  }
+      UWS50P() %>%
+        group_by(idx) %>%
+        summarise(
+          Count3 = sum(x))
+    }
   )
   
   uws50n <- reactive(
     x = {
-    data.frame(idx = rep(1:50), 
-               input$nSamp2-uws50p()[,2])
-  }
+      data.frame(idx = rep(1:50), 
+                 input$nSamp2-uws50p()[,2])
+    }
   )
   
   data50_1 <- reactive(
     x = {
-    merge(ups50p(),uws50p())
-  }
+      merge(ups50p(),uws50p())
+    }
   )
   
   data50_2 <- reactive(
     x = {
-    merge(ups50n(),uws50n())
-  }
+      merge(ups50n(),uws50n())
+    }
   )
   
   data50 <- reactive(
     x = {
-    merge.data.frame(data50_1(), data50_2(), by = "idx")
-  }
+      merge.data.frame(data50_1(), data50_2(), by = "idx")
+    }
   )
   
   ##generate 50 new sample (combined sample size)----
   UPS50P_3 <- reactive(
     x = {
-    input$newSample
-    data.frame(
-      x = do.call(
+      input$newSample
+      data.frame(
+        x = do.call(
           paste0("rbinom"),
           c(list(n = dN3() * 50), list(1, 0.595)))
-    ) %>%
-      mutate(idx = rep(1:50, each = dN3()))
-  })
+      ) %>%
+        mutate(idx = rep(1:50, each = dN3()))
+    })
   
   ups50p_3 <- reactive(
     x = {
-    UPS50P_3() %>%
-      group_by(idx) %>%
-      summarise(
-        Count1 = sum(x))
-  }
+      UPS50P_3() %>%
+        group_by(idx) %>%
+        summarise(
+          Count1 = sum(x))
+    }
   )
   
   ups50n_3 <- reactive(
     x = {
-    data.frame(idx = rep(1:50), 
-               Count2 = input$nSamp3-ups50p_3()[,2])
-  }
+      data.frame(idx = rep(1:50), 
+                 Count2 = input$nSamp3-ups50p_3()[,2])
+    }
   )
   
   UWS50P_3 <- reactive(
     x = {
-    input$newSample
-    data.frame(
-      x = do.call(
+      input$newSample
+      data.frame(
+        x = do.call(
           paste0("rbinom"),
           c(list(n = dN3() * 50), list(1, 0.844)))
-    ) %>%
-      mutate(idx = rep(1:50, each = dN3()))
-  }
+      ) %>%
+        mutate(idx = rep(1:50, each = dN3()))
+    }
   )
   
   uws50p_3 <- reactive(
     x = {
-    UWS50P_3() %>%
-      group_by(idx) %>%
-      summarise(
-        Count3 = sum(x))
-  }
+      UWS50P_3() %>%
+        group_by(idx) %>%
+        summarise(
+          Count3 = sum(x))
+    }
   )
   
   uws50n_3 <- reactive(
     x = {
-    data.frame(idx = rep(1:50), 
-               input$nSamp3-uws50p_3()[,2])
-  }
+      data.frame(idx = rep(1:50), 
+                 input$nSamp3-uws50p_3()[,2])
+    }
   )
   
   data50_1_3 <- reactive(
     x = {
-    merge(ups50p_3(),uws50p_3())
-  }
+      merge(ups50p_3(),uws50p_3())
+    }
   )
   
   data50_2_3 <- reactive(
     x = {
-    merge(ups50n_3(),uws50n_3())
-  }
+      merge(ups50n_3(),uws50n_3())
+    }
   )
   
   newdata50 <- reactive(
     x = {
-    merge.data.frame(data50_1_3(),data50_2_3(), by = "idx")
-  }
+      merge.data.frame(data50_1_3(),data50_2_3(), by = "idx")
+    }
   )
   
   ##calculate the interval----
   Intervals <- reactive(
     x = {
-    zvalue = qnorm(((1 - input$dLevel)/2), lower.tail = F)
-    sampleRatio = (data50()[,2]*data50()[,5])/(data50()[,3]*data50()[,4])
-    lowerbound = exp(log(sampleRatio) - zvalue*sqrt(1/data50()[,2] + 
-                                                      1/data50()[,5] +
-                                                      1/data50()[,3] + 
-                                                      1/data50()[,4]))
-    upperbound = exp(log(sampleRatio) + zvalue*sqrt(1/data50()[,2] + 
-                                                      1/data50()[,5] +
-                                                      1/data50()[,3] +
-                                                      1/data50()[,4]))
-    data.frame(idx = rep(1:50), 
-               sampleRatio,
-               lowerbound,
-               upperbound,
-               cover = (lowerbound < 0.35) & (0.35 < upperbound))
-  }
+      zvalue = qnorm(((1 - input$dLevel)/2), lower.tail = F)
+      sampleRatio = (data50()[,2]*data50()[,5])/(data50()[,3]*data50()[,4])
+      lowerbound = exp(log(sampleRatio) - zvalue*sqrt(1/data50()[,2] + 
+                                                        1/data50()[,5] +
+                                                        1/data50()[,3] + 
+                                                        1/data50()[,4]))
+      upperbound = exp(log(sampleRatio) + zvalue*sqrt(1/data50()[,2] + 
+                                                        1/data50()[,5] +
+                                                        1/data50()[,3] +
+                                                        1/data50()[,4]))
+      data.frame(idx = rep(1:50), 
+                 sampleRatio,
+                 lowerbound,
+                 upperbound,
+                 cover = (lowerbound < 0.35) & (0.35 < upperbound))
+    }
   )
   
   newIntervals <- reactive(
     x = {
-    zvalue = qnorm(((1 - input$dLevel1)/2), lower.tail = F)
-    sampleRatio = (newdata50()[,2]*newdata50()[,5])/(newdata50()[,3]*newdata50()[,4])
-    lowerbound = exp(log(sampleRatio) - zvalue*sqrt(1/newdata50()[,2] + 
-                                                      1/newdata50()[,5] + 
-                                                      1/newdata50()[,3] + 
-                                                      1/newdata50()[,4]))
-    upperbound = exp(log(sampleRatio) + zvalue*sqrt(1/newdata50()[,2] +
-                                                      1/newdata50()[,5] + 
-                                                      1/newdata50()[,3] + 
-                                                      1/newdata50()[,4]))
-    data.frame(idx = rep(1:50), 
-               sampleRatio,
-               lowerbound,
-               upperbound,
-               cover = (lowerbound < 0.35) & (0.35 < upperbound))
-  }
+      zvalue = qnorm(((1 - input$dLevel1)/2), lower.tail = F)
+      sampleRatio = (newdata50()[,2]*newdata50()[,5])/(newdata50()[,3]*newdata50()[,4])
+      lowerbound = exp(log(sampleRatio) - zvalue*sqrt(1/newdata50()[,2] + 
+                                                        1/newdata50()[,5] + 
+                                                        1/newdata50()[,3] + 
+                                                        1/newdata50()[,4]))
+      upperbound = exp(log(sampleRatio) + zvalue*sqrt(1/newdata50()[,2] +
+                                                        1/newdata50()[,5] + 
+                                                        1/newdata50()[,3] + 
+                                                        1/newdata50()[,4]))
+      data.frame(idx = rep(1:50), 
+                 sampleRatio,
+                 lowerbound,
+                 upperbound,
+                 cover = (lowerbound < 0.35) & (0.35 < upperbound))
+    }
   )
   
   ##default as all the samples are selected----
   selSampVal <- 50
   selectedSample <- reactive(
     x = {
-    if (!is.null(input$plot_click)) {
-      selSampVal <<- round(input$plot_click$y)
-      if (selSampVal < 1) selSampVal <<- 1
-      if (selSampVal > 50) selSampVal <<- 50
+      if (!is.null(input$plot_click)) {
+        selSampVal <<- round(input$plot_click$y)
+        if (selSampVal < 1) selSampVal <<- 1
+        if (selSampVal > 50) selSampVal <<- 50
+      }
+      selSampVal
     }
-    selSampVal
-  }
   )
   
   # selected sample----
   OneSample <- reactive(
     x = {
-    data50() %>%
-      filter( idx == selectedSample() )
-  }
+      data50() %>%
+        filter( idx == selectedSample() )
+    }
   )
   
   OneSampleColor <- reactive(
     x = {
-    colors <- c("TRUE" = "#ff7532", "FALSE" = "red")
-    covers <- (Intervals() %>% filter(idx == selectedSample()) )$cover
-    colors[ as.character(covers) ]
-  }
+      colors <- c("TRUE" = "#ff7532", "FALSE" = "red")
+      covers <- (Intervals() %>% filter(idx == selectedSample()) )$cover
+      colors[ as.character(covers) ]
+    }
   )
   
   # selected sample (combined version) 
   newOneSample <- reactive(
     x = {
-    newdata50() %>%
-      filter( idx == selectedSample() )
-  }
+      newdata50() %>%
+        filter( idx == selectedSample() )
+    }
   )
   
   newOneSampleColor <- reactive(
     x = {
-    colors <- c("TRUE" = "#ff7532", "FALSE" = "red")
-    covers <- (newIntervals() %>% filter(idx == selectedSample()) )$cover
-    colors[ as.character(covers) ]
-  }
+      colors <- c("TRUE" = "#ff7532", "FALSE" = "red")
+      covers <- (newIntervals() %>% filter(idx == selectedSample()) )$cover
+      colors[ as.character(covers) ]
+    }
   )
   
-  ##print the CIplot----
+  ## Print the CIplot ----
   output$CIplot <- renderPlot(
     expr = {
-      if (input$tabset == "Same Sample Size") {
+      data <- if (input$tabset == "Same Sample Size") {
         validate(
           need(is.numeric(input$nSamp3),
                message = "Please input sample size")
         )
+        newIntervals()
+      } else {
+        validate(
+          need(is.numeric(input$nSamp1), is.numeric(input$nSamp2),
+               
+               message = "Please input sample size")
+        )
+        Intervals()
+      }
+      
+      total_points <- nrow(data)
+      lavender_points <- sum(data$sampleRatio == 0)
+      valid_points <- total_points - lavender_points
+      covered_points <- sum(data$cover == TRUE & data$sampleRatio != 0)
+      coverage_rate <- round((covered_points / valid_points) * 100, 2)
+      
+      output$coverageText <- renderText({
+        paste0(covered_points, " out of ", valid_points, " intervals cover the parameter. Rate for these samples is ", coverage_rate, "%.")
+      })
+      
+      if (input$tabset == "Same Sample Size") {
         ggplot(data = newIntervals()) +
           geom_pointrange(
             aes(x = idx,
                 ymin = lowerbound,
                 ymax = upperbound,
                 y = sampleRatio,
-                colour = cover,
-                alpha = idx == selectedSample(),
-                size = idx == selectedSample()
+                colour = factor(ifelse(sampleRatio == 0, "Zero", ifelse(cover == "TRUE", "Covered", "Not Covered"))),
+                alpha = factor(ifelse(sampleRatio == 0, "Zero", ifelse(idx == selectedSample(), "Selected", "Not Selected"))),
+                size = factor(ifelse(idx == selectedSample(), "Selected", "Not Selected"))
             )) +
           theme_bw() +
           geom_hline(yintercept = 1, linewidth = 1.8, colour = "#000000", alpha = 1) +
           geom_hline(yintercept = .35, linewidth = 1.8, colour = boastPalette[3],
                      alpha = 1) +
           coord_flip() +
-          scale_size_manual(values = c("TRUE" = 1.5, "FALSE" = .8), guide = FALSE) +
-          scale_color_manual(values = c("FALSE" = "#BC204B", "TRUE" = "#1E407C"),
-                             guide = FALSE) +
-          scale_alpha_manual(values = c("TRUE" = 1, "FALSE" = .5), guide = FALSE) +
-          lims(y = c(-0.01, 4.55)) +
+          scale_size_manual(values = c("Selected" = 1.5, "Not Selected" = .8), guide = "none") +
+          scale_color_manual(values = c("Not Covered" = "#BC204B", "Covered" = "#1E407C", "Zero" = "#AC8DCE"),
+                             labels = c("Not Covered" = "Not Covered", "Covered" = "Covered", "Zero" = "Ratio = 0"),
+                             name = "Legend") +
+          scale_alpha_manual(values = c("Zero" = 1, "Selected" = 1, "Not Selected" = .5), guide = "none") +
           labs(title = paste0(100 * input$dLevel1, "% Confidence Intervals"),
-               x = "", y = "") +
-          theme(legend.position = "none",
+               x = "", y = "Enrollment by residency between University Park and other Campuses.",
+               caption = "") +
+          theme(legend.position = "bottom",
                 axis.text.x = element_text(size = 14, face = "bold"),
-                axis.text.y = element_text(size = 14, face = "bold"),
+                axis.text.y = element_blank(),
                 axis.ticks.y = element_blank(),
                 plot.title = element_text(size = 18),
                 axis.title.x = element_text(size = 14),
-                axis.title.y = element_text(size = 14))
+                axis.title.y = element_blank())+ # Remove y-axis title
+          guides(colour = guide_legend(override.aes = list(size = 1),
+                                       title = NULL,
+                                       label.theme = element_text(size = 12)))
       } else {
         validate(
           need(is.numeric(input$nSamp1), is.numeric(input$nSamp2),
@@ -955,132 +1001,138 @@ server <- function(input, output, session) {
                 ymin = lowerbound,
                 ymax = upperbound,
                 y = sampleRatio,
-                colour = cover,
-                alpha = idx == selectedSample(),
-                size = idx == selectedSample()
+                colour = factor(ifelse(sampleRatio == 0, "Zero", ifelse(cover == "TRUE", "Covered", "Not Covered"))),
+                alpha = factor(ifelse(sampleRatio == 0, "Zero", ifelse(idx == selectedSample(), "Selected", "Not Selected"))),
+                size = factor(ifelse(idx == selectedSample(), "Selected", "Not Selected"))
             )) +
           theme_bw() +
           geom_hline(yintercept = 1, linewidth = 1.8, colour = "#000000", alpha = 1) +
-          geom_hline(yintercept = .35, linewidth = 1.8, colour = boastPalette[3], 
+          geom_hline(yintercept = .35, linewidth = 1.8, colour = boastPalette[3],
                      alpha = 1) +
           coord_flip() +
-          scale_size_manual(values = c("TRUE" = 1.5, "FALSE" = .8), guide = FALSE) +
-          scale_color_manual(values = c("FALSE" = "#BC204B", "TRUE" = "#1E407C"),
-                             guide = FALSE) +
-          scale_alpha_manual(values = c("TRUE" = 1, "FALSE" = .5), guide = FALSE) +
-          lims(y = c(-0.01, 4.55)) +
-          labs(title = paste0(100 * input$dLevel, "% Confidence Intervals"),
-               x = "", y = "") +
-          theme(legend.position = "none",
+          scale_size_manual(values = c("Selected" = 1.5, "Not Selected" = .8), guide = "none") +
+          scale_color_manual(values = c("Not Covered" = "#BC204B", "Covered" = "#1E407C", "Zero" = "#AC8DCE"),
+                             labels = c("Not Covered" = "Not Covered", "Covered" = "Covered", "Zero" = "Ratio = 0"),
+                             name = "Legend") +
+          scale_alpha_manual(values = c("Zero" = 1, "Selected" = 1, "Not Selected" = .5), guide = "none") +
+          labs(title = paste0(100 * input$dLevel1, "% Confidence Intervals"),
+               x = "", y = "Enrollment by residency between University Park and other Campuses.",
+               caption = "") +
+          theme(legend.position = "bottom",
                 axis.text.x = element_text(size = 14, face = "bold"),
-                axis.text.y = element_text(size = 14, face = "bold"),
+                axis.text.y = element_blank(),
                 axis.ticks.y = element_blank(),
                 plot.title = element_text(size = 18),
                 axis.title.x = element_text(size = 14),
-                axis.title.y = element_text(size = 14))
+                axis.title.y = element_blank())+ # Remove y-axis title
+          guides(colour = guide_legend(override.aes = list(size = 1),
+                                       title = NULL,
+                                       label.theme = element_text(size = 12)))
       }
     },
-    alt = "This is a plot with a confidence interval for every point, the points
-        are listed vertically and you click in the same row as a data point to learn
-        more about it",
+    alt = "This is a plot with a confidence interval for every point, the points are listed vertically and you click in the same row as a data point to learn more about it"
   )
   
   
   
   ## sample display----
   output$sampleinfotable1 = renderTable({
-  if (input$tabset == "Same Sample Size") {
-    validate(
-      need(is.numeric(input$nSamp3),
-           message = "Please input sample size")
-    )
-    ctable <- matrix(c(
-      percent(newOneSample()[, 2] / input$nSamp3),
-      percent(newOneSample()[, 3] / input$nSamp3),
-      percent(newOneSample()[, 4] / input$nSamp3),
-      percent(newOneSample()[, 5] / input$nSamp3)
-    ), ncol = 2,
-    dimnames = list(Campus = c("University Park", "Other Campuses"),
-    State = c("Penn", "Non-Penn")))
-    rownames(ctable) <- c("University Park", "Other Campuses")
-    ctable
-  } else {
-    validate(
-      need(is.numeric(input$nSamp1), is.numeric(input$nSamp2),
-           message = "Please input sample size")
-    )
-    ctable <- matrix(c(
-      percent(OneSample()[, 2] / input$nSamp1),
-      percent(OneSample()[, 3] / input$nSamp2),
-      percent(OneSample()[, 4] / input$nSamp1),
-      percent(OneSample()[, 5] / input$nSamp2)
-    ), ncol = 2,
-    dimnames = list(Campus = c("University Park", "Other Campuses"),
-    State = c("Penn", "Non-Penn")))
-    rownames(ctable) <- c("University Park", "Other Campuses")
-    ctable
-  }
-}, align = "c")
-
-output$sampleinfotable2 = renderTable({
-  if (input$tabset == "Same Sample Size") {
-    validate(
-      need(is.numeric(input$nSamp3),
-           message = "Please input sample size")
-    )
-    ctable <- matrix(c(
-      newOneSample()[, 2],
-      newOneSample()[, 3],
-      newOneSample()[, 4],
-      newOneSample()[, 5]
-    ), ncol = 2,
-    dimnames = list(Campus = c("University Park", "Other Campuses"),
-    State = c("Penn", "Non-Penn")))
-    rownames(ctable) <- c("University Park", "Other Campuses")
-    ctable
-  } else {
-    validate(
-      need(is.numeric(input$nSamp1), is.numeric(input$nSamp2),
-           message = "Please input sample size")
-    )
-    ctable <- matrix(c(
-      OneSample()[, 2],
-      OneSample()[, 3],
-      OneSample()[, 4],
-      OneSample()[, 5]
-    ), ncol = 2,
-    dimnames = list(Campus = c("University Park", "Other Campuses"),
-    State = c("Penn", "Non-Penn")))
-    rownames(ctable) <- c("University Park", "Other Campuses")
-    ctable
-  }
-}, align = "c")
-
+    if (input$tabset == "Same Sample Size") {
+      validate(
+        need(is.numeric(input$nSamp3),
+             message = "Please input sample size")
+      )
+      ctable <- matrix(c(
+        percent(newOneSample()[, 2] / input$nSamp3),
+        percent(newOneSample()[, 3] / input$nSamp3),
+        percent(newOneSample()[, 4] / input$nSamp3),
+        percent(newOneSample()[, 5] / input$nSamp3)
+      ), ncol = 2,
+      dimnames = list(Campus = c("University Park", "Other Campuses"),
+                      State = c("Penn", "Non-Penn")))
+      rownames(ctable) <- c("University Park", "Other Campuses")
+      ctable
+    } else {
+      validate(
+        need(is.numeric(input$nSamp1), is.numeric(input$nSamp2),
+             message = "Please input sample size")
+      )
+      ctable <- matrix(c(
+        percent(OneSample()[, 2] / input$nSamp1),
+        percent(OneSample()[, 3] / input$nSamp2),
+        percent(OneSample()[, 4] / input$nSamp1),
+        percent(OneSample()[, 5] / input$nSamp2)
+      ), ncol = 2,
+      dimnames = list(Campus = c("University Park", "Other Campuses"),
+                      State = c("Penn", "Non-Penn")))
+      rownames(ctable) <- c("University Park", "Other Campuses")
+      ctable
+    }
+  }, align = "c")
+  
+  output$sampleinfotable2 = renderTable({
+    if (input$tabset == "Same Sample Size") {
+      validate(
+        need(is.numeric(input$nSamp3),
+             message = "Please input sample size")
+      )
+      ctable <- matrix(c(
+        newOneSample()[, 2],
+        newOneSample()[, 3],
+        newOneSample()[, 4],
+        newOneSample()[, 5]
+      ), ncol = 2,
+      dimnames = list(Campus = c("University Park", "Other Campuses"),
+                      State = c("Penn", "Non-Penn")))
+      rownames(ctable) <- c("University Park", "Other Campuses")
+      ctable
+    } else {
+      validate(
+        need(is.numeric(input$nSamp1), is.numeric(input$nSamp2),
+             message = "Please input sample size")
+      )
+      ctable <- matrix(c(
+        OneSample()[, 2],
+        OneSample()[, 3],
+        OneSample()[, 4],
+        OneSample()[, 5]
+      ), ncol = 2,
+      dimnames = list(Campus = c("University Park", "Other Campuses"),
+                      State = c("Penn", "Non-Penn")))
+      rownames(ctable) <- c("University Park", "Other Campuses")
+      ctable
+    }
+  }, align = "c")
   
   
   
-output$sampleinforatioUi <- renderUI(
-  expr = {
-  if (input$tabset == "Combined Sample Size") {
-    validate(
-      need(is.numeric(input$nSamp3),
-           message = "Please input sample size")
-    )
-    cratio <- round(((newOneSample()[, 2]) * (newOneSample()[, 5]) / 
-                       (newOneSample()[, 3] * newOneSample()[, 4])), 2)
-    p(paste0("Sample Odds Ratio, =", cratio))
-  } else {
-    validate(
-      need(is.numeric(input$nSamp1), is.numeric(input$nSamp2),
-           message = "Please input sample size")
-    )
-    cratio <- round(((OneSample()[, 2]) * (OneSample()[, 5]) /
-                       (OneSample()[, 3] * OneSample()[, 4])), 2)
-    p(paste0("Sample Odds Ratio, =", cratio))
-  }
-})
-
+  
+  output$sampleinforatioUi <- renderUI(
+    expr = {
+      if (input$tabset == "Combined Sample Size") {
+        validate(
+          need(is.numeric(input$nSamp3),
+               message = "Please input sample size")
+        )
+        cratio <- round(((newOneSample()[, 2]) * (newOneSample()[, 5]) / 
+                           (newOneSample()[, 3] * newOneSample()[, 4])), 2)
+      } else {
+        validate(
+          need(is.numeric(input$nSamp1), is.numeric(input$nSamp2),
+               message = "Please input sample size")
+        )
+        cratio <- round(((OneSample()[, 2]) * (OneSample()[, 5]) /
+                           (OneSample()[, 3] * OneSample()[, 4])), 2)
+      }
+      if (cratio == 0) {
+        p("Sample Odds Ratio =  ", cratio,",  Confidence interval not calculated")
+      } else {
+        p(paste0("Sample Odds Ratio = ", cratio))
+      }
+    })
+  
 }
+
 
 # Boast App Call ----
 boastUtils::boastApp(ui = ui, server = server)
